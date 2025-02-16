@@ -39,7 +39,7 @@ if __name__ == "__main__":
     # Example: Print the text of each page with its number
     for page, text in data.items():
         print(f"--- Page {page} ---")
-        print(text)
+        print(chunk_text(text, page, "", 300))
         print("\n")
         
         if page == 10 : break

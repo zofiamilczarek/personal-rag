@@ -1,2 +1,4 @@
-documents
+pdfs
 rag_env
+.DS_Store
+*.pyc
