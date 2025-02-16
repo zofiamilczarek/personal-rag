@@ -1,13 +1,14 @@
 
-pdfs
+raw_pdfs
 rag_env
 
 # mac specific files
 .DS_Store
 
 # python generated files
-*.pyc
+__pycache__
 
 # database files
 *.db
 *.index
+*.json

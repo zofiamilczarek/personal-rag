@@ -1,11 +1,11 @@
 import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
-
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from database import Database
+from preprocess import get_pdf_chunks
 
 class Retriever:
     def __init__(self, db_path="./database/retriever.db", index_path="./rag/faiss.index", model_name="all-MiniLM-L6-v2"):
@@ -23,8 +23,9 @@ class Retriever:
     def load_index(self):
         try:
             self.index = faiss.read_index(self.index_path)
+            self.doc_ids = [row[0] for row in self.db.fetch_all_embeddings()]
         except:
-            pass
+            self.doc_ids = []
 
     def save_index(self):
         faiss.write_index(self.index, self.index_path)
@@ -37,7 +38,9 @@ class Retriever:
         self.save_index()
 
     def add_documents_bulk(self, documents):
-        embeddings = [(header, chunk, self.model.encode(chunk).astype(np.float32)) for header, chunk in documents]
+        print(documents[0])
+        embeddings = [(str(doc['header']), doc['chunk'], self.model.encode(doc['chunk']).astype(np.float32)) for doc in documents]
+        print(embeddings[0])
         doc_ids = self.db.add_documents_bulk(embeddings)
         self.index.add(np.array([emb[2] for emb in embeddings]))
         self.doc_ids.extend(doc_ids)
@@ -71,6 +74,12 @@ class Retriever:
 
 if __name__ == "__main__":
     rtr = Retriever()
+    # chunks = get_pdf_chunks("./data/raw_pdfs/nlp_textbook_jurafsky.pdf", max_chunk_size=300)
+    # rtr.add_documents_bulk(chunks)
+    
+    retrieved_chunks = rtr.retrieve("I am tokenizing my sentence using word2vec")
+    
+    print(*retrieved_chunks, sep="\n\n")
     
     
     

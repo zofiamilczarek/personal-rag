@@ -17,24 +17,26 @@ class Database:
                               )''')
             conn.commit()
 
+    def _add_document(self, conn, header, chunk, embedding):
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO documents (header, chunk, embedding) VALUES (?, ?, ?)",
+                        (header, chunk, embedding.tobytes()))
+        doc_id = cursor.lastrowid
+        return doc_id
+
+    
     def add_document(self, header, chunk, embedding):
         with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("INSERT INTO documents (header, chunk, embedding) VALUES (?, ?, ?)",
-                           (header, chunk, embedding.tobytes()))
-            doc_id = cursor.lastrowid
+            doc_id = self._add_document(conn, header, chunk, embedding)
             conn.commit()
         return doc_id
 
     def add_documents_bulk(self, documents):
-        embeddings = []
         doc_ids = []
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             for header, chunk, embedding in documents:
-                cursor.execute("INSERT INTO documents (header, chunk, embedding) VALUES (?, ?, ?)",
-                               (header, chunk, embedding.tobytes()))
-                doc_ids.append(cursor.lastrowid)
+                doc_id = self._add_document(conn, header, chunk, embedding)
             conn.commit()
         return doc_ids
 
