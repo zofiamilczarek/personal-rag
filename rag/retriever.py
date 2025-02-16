@@ -1,60 +1,76 @@
 import faiss
+import numpy as np
 from sentence_transformers import SentenceTransformer
+
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from preprocess import *
-from typing import List, Dict
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from database import Database
 
+class Retriever:
+    def __init__(self, db_path="./database/retriever.db", index_path="./rag/faiss.index", model_name="all-MiniLM-L6-v2"):
+        self.db = Database(db_path)
+        self.index_path = index_path
+        self.model = SentenceTransformer(model_name)
+        self.index = faiss.IndexFlatL2(self.model.get_sentence_embedding_dimension())
+        self.doc_ids = []
 
-def create_faiss_index(chunks: List[Dict], model_name: str = "all-MiniLM-L6-v2") -> faiss.IndexFlatL2:
-    """Creates a FAISS index and stores chunk embeddings."""
-    model = SentenceTransformer(model_name)
-    embeddings = model.encode([chunk["chunk"] for chunk in chunks], convert_to_numpy=True)
-    index = faiss.IndexFlatL2(embeddings.shape[1])
-    index.add(embeddings)
-    return index
+        if os.path.exists(self.index_path):
+            self.load_index()
+        else:
+            self.save_index()
 
+    def load_index(self):
+        try:
+            self.index = faiss.read_index(self.index_path)
+        except:
+            pass
 
+    def save_index(self):
+        faiss.write_index(self.index, self.index_path)
 
-def retrieve_relevant_chunk(query: str, index: faiss.IndexFlatL2, chunks: List[Dict], model_name: str = "all-MiniLM-L6-v2", k: int = 5) -> List[Dict]:
-    """
-    Retrieve the top k most relevant chunks from the FAISS index for the given query.
+    def add_document(self, header, chunk):
+        embedding = self.model.encode(chunk).astype(np.float32)
+        doc_id = self.db.add_document(header, chunk, embedding)
+        self.index.add(np.array([embedding]))
+        self.doc_ids.append(doc_id)
+        self.save_index()
 
-    Args:
-        query (str): The search query.
-        index (faiss.IndexFlatL2): A FAISS index built from the chunks.
-        chunks (List[Dict]): The list of chunk dictionaries corresponding to the embeddings.
-        model_name (str): The SentenceTransformer model for encoding the query.
-        k (int): Number of top relevant chunks to return.
+    def add_documents_bulk(self, documents):
+        embeddings = [(header, chunk, self.model.encode(chunk).astype(np.float32)) for header, chunk in documents]
+        doc_ids = self.db.add_documents_bulk(embeddings)
+        self.index.add(np.array([emb[2] for emb in embeddings]))
+        self.doc_ids.extend(doc_ids)
+        self.save_index()
 
-    Returns:
-        List[Dict]: The list of chunk dictionaries most relevant to the query.
-    """
-    model = SentenceTransformer(model_name)
-    query_embedding = model.encode([query], convert_to_numpy=True)
-    distances, indices = index.search(query_embedding, k)
-    best_indices = indices[0]
-    return [chunks[i] for i in best_indices]
+    def retrieve(self, query, k=5):
+        query_embedding = self.model.encode(query).astype(np.float32).reshape(1, -1)
+        distances, indices = self.index.search(query_embedding, k)
+        results = []
+        for i in range(len(indices[0])):
+            if indices[0][i] == -1:
+                continue
+            doc_id = self.doc_ids[indices[0][i]]
+            row = self.db.fetch_document(doc_id)
+            if row:
+                results.append({"header": row[0], "chunk": row[1], "score": distances[0][i]})
+        return results
 
+    def delete_document(self, doc_id):
+        self.db.delete_document(doc_id)
+        self._rebuild_index()
+
+    def _rebuild_index(self):
+        self.index = faiss.IndexFlatL2(self.model.get_sentence_embedding_dimension())
+        self.doc_ids = []
+        for doc_id, embedding_blob in self.db.fetch_all_embeddings():
+            embedding = np.frombuffer(embedding_blob, dtype=np.float32)
+            self.index.add(np.array([embedding]))
+            self.doc_ids.append(doc_id)
+        self.save_index()
 
 if __name__ == "__main__":
-    directory = "./pdfs"  # Change to your directory path
-    pdf_texts = load_pdfs_from_directory(directory)
-    all_chunks = []
-    
-    for title, pages in pdf_texts.items():
-        for page_nb, text in pages.items():
-            all_chunks.extend(chunk_text(text, page_nb, title, max_chunk_size=500))
-    
-    index = create_faiss_index(all_chunks)
-    print("FAISS index created with", index.ntotal, "chunks.")
-    
-    query = "What is tf idf"
-    
-    chunks = retrieve_relevant_chunk(query, index, all_chunks)
-    
-    print(*chunks, sep="\n")
+    rtr = Retriever()
     
     
     

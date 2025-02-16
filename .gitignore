@@ -1,4 +1,13 @@
+
 pdfs
 rag_env
+
+# mac specific files
 .DS_Store
+
+# python generated files
 *.pyc
+
+# database files
+*.db
+*.index
