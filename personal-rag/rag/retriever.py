@@ -58,6 +58,10 @@ class Retriever:
             if row:
                 results.append({"header": row[0], "chunk": row[1], "score": distances[0][i]})
         return results
+    
+    def rerank(self, chunks, k=5):
+        # TODO : implement a reranker that reranks the retrieved chunks
+        raise NotImplementedError
 
     def delete_document(self, doc_id):
         self.db.delete_document(doc_id)
@@ -77,7 +81,7 @@ if __name__ == "__main__":
     # chunks = get_pdf_chunks("./data/raw_pdfs/nlp_textbook_jurafsky.pdf", max_chunk_size=300)
     # rtr.add_documents_bulk(chunks)
     
-    retrieved_chunks = rtr.retrieve("I am tokenizing my sentence using word2vec")
+    retrieved_chunks = rtr.retrieve("How do I do RAG")
     
     print(*retrieved_chunks, sep="\n\n")
     
