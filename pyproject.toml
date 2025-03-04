@@ -1,5 +1,5 @@
 [project]
-name = "personal-rag"
+name = "personal_rag"
 version = "0.1.0"
 description = "A simple personal RAG pipeline"
 authors = [
@@ -8,6 +8,11 @@ authors = [
 
 dependencies = [
     "pandas",
+    "PyPDF2",
+    "tqdm",
+    "sentence_transformers",
+    "numpy",
+    "faiss-cpu"
 ]
 
 [build-system]
@@ -15,4 +20,4 @@ requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-where = ["personal-rag"]
+where = ["src"]

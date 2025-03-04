@@ -1,8 +1,7 @@
 import sqlite3
-import numpy as np
 
 class Database:
-    def __init__(self, db_path="./database/retriever.db"):
+    def __init__(self, db_path="./data/database_files/retriever.db"):
         self.db_path = db_path
         self._init_db()
 

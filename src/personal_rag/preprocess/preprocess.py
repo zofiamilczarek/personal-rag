@@ -1,7 +1,6 @@
 # parses the pdfs into chunks
 import os
 import PyPDF2
-import numpy as np
 from typing import List, Dict
 from tqdm import tqdm
 import json

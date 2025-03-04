@@ -12,3 +12,6 @@ __pycache__
 *.db
 *.index
 *.json
+
+# toml setup files
+*.egg-info

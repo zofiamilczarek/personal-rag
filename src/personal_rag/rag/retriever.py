@@ -7,14 +7,17 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from database import Database
 from preprocess import get_pdf_chunks
 
-class Retriever:
-    def __init__(self, db_path="./database/retriever.db", index_path="./rag/faiss.index", model_name="all-MiniLM-L6-v2"):
+class Retriever: 
+    def __init__(self, 
+                 db_path="./data/database_files/retriever.db", 
+                 index_path="./data/database_files/faiss.index", 
+                 model_name="all-MiniLM-L6-v2",):
+        
         self.db = Database(db_path)
         self.index_path = index_path
         self.model = SentenceTransformer(model_name)
         self.index = faiss.IndexFlatL2(self.model.get_sentence_embedding_dimension())
         self.doc_ids = []
-
         if os.path.exists(self.index_path):
             self.load_index()
         else:
