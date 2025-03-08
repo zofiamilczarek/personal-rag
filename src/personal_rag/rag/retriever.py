@@ -1,11 +1,9 @@
 import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
-import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from database import Database
-from preprocess import get_pdf_chunks
+from personal_rag.database import Database
+# from personal_rag.preprocess import get_pdf_chunks
 
 class Retriever: 
     def __init__(self, 
@@ -32,6 +30,11 @@ class Retriever:
 
     def save_index(self):
         faiss.write_index(self.index, self.index_path)
+        
+    def clear_index(self):
+        self.index = faiss.IndexFlatL2(self.model.get_sentence_embedding_dimension())
+        self.doc_ids = []
+        self.save_index()
 
     def add_document(self, header, chunk):
         embedding = self.model.encode(chunk).astype(np.float32)
@@ -41,9 +44,7 @@ class Retriever:
         self.save_index()
 
     def add_documents_bulk(self, documents):
-        print(documents[0])
         embeddings = [(str(doc['header']), doc['chunk'], self.model.encode(doc['chunk']).astype(np.float32)) for doc in documents]
-        print(embeddings[0])
         doc_ids = self.db.add_documents_bulk(embeddings)
         self.index.add(np.array([emb[2] for emb in embeddings]))
         self.doc_ids.extend(doc_ids)
@@ -80,11 +81,12 @@ class Retriever:
         self.save_index()
 
 if __name__ == "__main__":
-    rtr = Retriever()
+    rtr = Retriever(db_path="./data/test_database_files/retriever.db", index_path="./data/test_database_files/faiss.index")
+    # rtr = Retriever()
     # chunks = get_pdf_chunks("./data/raw_pdfs/nlp_textbook_jurafsky.pdf", max_chunk_size=300)
     # rtr.add_documents_bulk(chunks)
     
-    retrieved_chunks = rtr.retrieve("How do I do RAG")
+    retrieved_chunks = rtr.retrieve("Explain TF-IDF")
     
     print(*retrieved_chunks, sep="\n\n")
     

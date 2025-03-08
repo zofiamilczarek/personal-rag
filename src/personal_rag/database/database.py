@@ -1,8 +1,12 @@
 import sqlite3
+from pathlib import Path
+
 
 class Database:
     def __init__(self, db_path="./data/database_files/retriever.db"):
         self.db_path = db_path
+        directory_path = Path(self.db_path).parents[0]
+        directory_path.mkdir(exist_ok=True)
         self._init_db()
 
     def _init_db(self):
