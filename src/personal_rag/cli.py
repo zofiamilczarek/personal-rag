@@ -24,20 +24,37 @@ class PersonalRagCLI(cmd.Cmd):
     def __init__(self):
         super().__init__()
         self.current_directory = os.getcwd()
-
+        # TODO: make the retriever be actually loaded if the relevant files exist
+        self.retriever = Retriever(db_path="./data/database_files/retriever.db", index_path="./data/database_files/faiss.index")
+    
+    def query_result_pretty_print(self, results):
+        docs = {}
+        for res in results:
+            title = res['header']['title']
+            page = res['header']['page']
+            if title in docs.keys():
+                docs[title].append(page)
+            else:
+                docs[title] = [page]
+        
+        for filename, pages in docs.items():
+            print(filename)
+            print(f"\tRelevant pages : {sorted(pages)}")
+    
     def do_load_my_data(self, dirpath):
         """
         Loads and preprocessed your pdfs to be ready to use with the RAG system. Requires a path to the folder with your pdfs
         For example:
-            load_my_data /home/documents/my_pdfs
+            load_my_data ./documents/my_pdfs
         """
         
         path = Path(dirpath)
                 
         # TODO: WEEWOOWEEWOO this throws an error when it shouldnt
-        # if path.is_dir():
-        #     raise NotADirectoryError(f"The provided path '{dirpath}' is not a directory.")
-        
+        if not path.is_dir():
+            print("The provided path '{dirpath}' is not an existing directory.")
+            return        
+                
         # preprocess
         for file_path in path.iterdir():
             # ignore files that aren't pdfs
@@ -52,14 +69,18 @@ class PersonalRagCLI(cmd.Cmd):
                 print(f"failed to load {file_path}")
         
         # ingest
-        create_faiss_index("./data/processed")
-        
-        
+        self.retriever = create_faiss_index("./data/processed")
+            
+    
     def do_query(self, query):
         """
-        Allows you to ask a query to Retriever. It will retrieve document chunks with relevant text and give you the pages 
+        Allows you to ask a query to Retriever. It will retrieve document chunks with relevant text and give you the relevant pages in the pdf. 
+        For example:
+            query "How do I add 2+2?"
         """
-        print(query)
+        results = self.retriever.retrieve(query)
+        print("\nWe found the following document chunks most relevant to your query:\n")
+        self.query_result_pretty_print(results)
         
     def do_rag_query(self, query):
         pass

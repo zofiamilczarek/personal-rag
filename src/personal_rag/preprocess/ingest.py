@@ -4,9 +4,12 @@ import json
 
 # TODO: create a test here
 # maybe this should be part of the Retriever class
-def create_faiss_index(data_path, clear_index = True):
+def create_faiss_index(data_path, 
+                       clear_index = True,
+                       db_path = "./data/database_files/retriever.db",
+                       index_path = "./data/database_files/faiss.index"):
     path = Path(data_path)
-    rtr = Retriever(db_path="./data/test_database_files/retriever.db", index_path="./data/test_database_files/faiss.index")
+    rtr = Retriever(db_path=db_path, index_path=index_path)
     
     if not path.is_dir():
             raise NotADirectoryError(f"The provided path '{path}' is not a directory.")

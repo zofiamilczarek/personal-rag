@@ -5,7 +5,7 @@ import os
 from personal_rag.database import Database
 # from personal_rag.preprocess import get_pdf_chunks
 import json
-
+import ast
 
 class Retriever: 
     def __init__(self, 
@@ -78,15 +78,33 @@ class Retriever:
         for i in range(len(indices[0])):
             if indices[0][i] == -1:
                 continue
-            doc_id = self.doc_ids[indices[0][i]]
+            try:
+                doc_id = self.doc_ids[indices[0][i]]
+            except IndexError:
+                print(f"{self.doc_ids=}")
+                print(f"{len(self.doc_ids)=}")
+                print(f"{indices=}")
+                raise IndexError
             row = self.db.fetch_document(doc_id)
             if row:
                 results.append({
-                    "header": row[0],
+                    "header": ast.literal_eval(row[0]),
                     "chunk": row[1],
                     "score": distances[0][i]
                 })
         return results
+    
+    def pretty_retrieve(self,query,k=5):
+        results = self.retrieve(query, k=k)
+        docs = {}
+        for res in results:
+            title = res['header']['title']
+            page = res['header']['page']
+            if title in docs.keys():
+                docs[title].append(page)
+            else:
+                docs[title] = [page]
+        return docs
     
     def delete_document(self, doc_id):
         self.db.delete_document(doc_id)
@@ -110,11 +128,11 @@ class Retriever:
         self.save_index()
 
 if __name__ == "__main__":
-    rtr = Retriever(db_path="./data/test_database_files/retriever.db", index_path="./data/test_database_files/faiss.index")
+    rtr = Retriever(db_path="./data/database_files/retriever.db", index_path="./data/database_files/faiss.index")
     # rtr = Retriever()
     # chunks = get_pdf_chunks("./data/raw_pdfs/nlp_textbook_jurafsky.pdf", max_chunk_size=300)
     # rtr.add_documents_bulk(chunks)
     
-    retrieved_chunks = rtr.retrieve("How do LLMs work")
+    retrieved_chunks = rtr.retrieve("Machine Yearning", k=20)
     
     print(*retrieved_chunks, sep="\n\n")
