@@ -1,17 +1,23 @@
 import cmd
 import os
+import glob as gb
 import json
 from personal_rag.rag import Retriever
 from pathlib import Path
 from personal_rag.preprocess import get_pdf_chunks
 from personal_rag.preprocess import create_faiss_index
 
+import readline
 
-# run ingest
+readline.set_completer_delims(' \t\n')
 
-# create the Retriever object
 
-# make a nice UI to make queries and such
+def _complete_path(path):
+    """A method to handle path autocomplete in a cmd.Cmd interface"""
+    if os.path.isdir(path):
+        return gb.glob(os.path.join(path, '*'))
+    else:
+        return gb.glob(path+'*')
 
 class STYLES:
     pass
@@ -27,19 +33,7 @@ class PersonalRagCLI(cmd.Cmd):
         # TODO: make the retriever be actually loaded if the relevant files exist
         self.retriever = Retriever(db_path="./data/database_files/retriever.db", index_path="./data/database_files/faiss.index")
     
-    def query_result_pretty_print(self, results):
-        docs = {}
-        for res in results:
-            title = res['header']['title']
-            page = res['header']['page']
-            if title in docs.keys():
-                docs[title].append(page)
-            else:
-                docs[title] = [page]
-        
-        for filename, pages in docs.items():
-            print(filename)
-            print(f"\tRelevant pages : {sorted(pages)}")
+    
     
     def do_load_my_data(self, dirpath):
         """
@@ -50,7 +44,6 @@ class PersonalRagCLI(cmd.Cmd):
         
         path = Path(dirpath)
                 
-        # TODO: WEEWOOWEEWOO this throws an error when it shouldnt
         if not path.is_dir():
             print("The provided path '{dirpath}' is not an existing directory.")
             return        
@@ -72,6 +65,23 @@ class PersonalRagCLI(cmd.Cmd):
         self.retriever = create_faiss_index("./data/processed")
             
     
+    def complete_load_my_data(self, text, line, start_idx, end_idx):
+        return _complete_path(text)
+    
+    def query_result_pretty_print(self, results):
+        docs = {}
+        for res in results:
+            title = res['header']['title']
+            page = res['header']['page']
+            if title in docs.keys():
+                docs[title].append(page)
+            else:
+                docs[title] = [page]
+        
+        for filename, pages in docs.items():
+            print(filename)
+            print(f"\tRelevant pages : {sorted(pages)}")
+    
     def do_query(self, query):
         """
         Allows you to ask a query to Retriever. It will retrieve document chunks with relevant text and give you the relevant pages in the pdf. 
@@ -86,7 +96,7 @@ class PersonalRagCLI(cmd.Cmd):
         pass
     
     def postcmd(self, stop, line):
-        print()  # Add an empty line for better readability
+        print()  
         return stop
     
     
