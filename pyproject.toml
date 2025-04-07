@@ -12,7 +12,8 @@ dependencies = [
     "tqdm",
     "sentence_transformers",
     "numpy",
-    "faiss-cpu"
+    "faiss-cpu",
+    "transformers",
 ]
 
 [build-system]

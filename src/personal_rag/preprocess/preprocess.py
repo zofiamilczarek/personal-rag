@@ -1,5 +1,6 @@
 # parses the pdfs into chunks
 import os
+from pathlib import Path
 import PyPDF2
 from typing import List, Dict
 from tqdm import tqdm
@@ -37,6 +38,20 @@ def get_pdf_chunks(pdf_path: str, max_chunk_size: int = 500):
         all_chunks.extend(page_chunks)
     return all_chunks
 
+def preprocess_pdfs_in_directory(directory: str, savepath = ".data/processed", max_chunk_size: int = 500) -> None:
+    """Processes all PDFs in a directory and returns a list of chunks.""" 
+    
+    if not os.path.exists(savepath):
+            os.makedirs(savepath)
+    
+    for root, _, files in os.walk(directory):
+        for file in files:
+            if file.endswith(".pdf"):
+                pdf_path = os.path.join(root, file)
+                file_name = Path(pdf_path).stem
+                chunks = get_pdf_chunks(pdf_path, max_chunk_size)
+                with open(f"{savepath}/{file_name}_chunks.json", 'w') as f:
+                    json.dump(chunks, f)
 
 if __name__ == "__main__":
     pdf_path = "./data/raw_pdfs/nlp_textbook_jurafsky.pdf"

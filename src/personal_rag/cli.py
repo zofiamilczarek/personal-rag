@@ -4,7 +4,7 @@ import glob as gb
 import json
 from personal_rag.rag import Retriever
 from pathlib import Path
-from personal_rag.preprocess import get_pdf_chunks
+from personal_rag.preprocess import get_pdf_chunks, preprocess_pdfs_in_directory
 from personal_rag.preprocess import create_faiss_index
 
 import readline
@@ -25,14 +25,17 @@ class STYLES:
 
 class PersonalRagCLI(cmd.Cmd):
     prompt = 'PersonalRAG>> '
-    intro = 'Welcome to PersonalRAG. Type "help" for available commands.'
+    intro = 'Welcome to PersonalRAG.\nType "help" for available commands.\nType "bye" to exit.'
     
     def __init__(self):
         super().__init__()
         self.current_directory = os.getcwd()
         # TODO: make the retriever be actually loaded if the relevant files exist
         self.retriever = Retriever(db_path="./data/database_files/retriever.db", index_path="./data/database_files/faiss.index")
-    
+        
+        self.cache_dir = "./data"
+        if not os.path.exists(self.cache_dir):
+            os.makedirs(self.cache_dir)
     
     
     def do_load_my_data(self, dirpath):
@@ -45,25 +48,17 @@ class PersonalRagCLI(cmd.Cmd):
         path = Path(dirpath)
                 
         if not path.is_dir():
-            print("The provided path '{dirpath}' is not an existing directory.")
+            print(f"The provided path '{dirpath}' is not an existing directory.")
             return        
                 
-        # preprocess
-        for file_path in path.iterdir():
-            # ignore files that aren't pdfs
-            if Path(file_path).suffix != '.pdf':
-                continue
-            try:
-                chunks = get_pdf_chunks(str(file_path))
-                file_name = file_path.stem
-                with open(f'./data/processed/{file_name}_chunks.json', 'w') as f:
-                    f.write(json.dumps(chunks))
-            except:
-                print(f"failed to load {file_path}")
+        preprocess_dir = f"{self.cache_dir}/processed"
+        if not os.path.exists(preprocess_dir):
+            os.makedirs(preprocess_dir)
+        
+        preprocess_pdfs_in_directory(dirpath, savepath=preprocess_dir)
         
         # ingest
-        self.retriever = create_faiss_index("./data/processed")
-            
+        self.retriever = create_faiss_index(preprocess_dir)    
     
     def complete_load_my_data(self, text, line, start_idx, end_idx):
         return _complete_path(text)
@@ -93,12 +88,17 @@ class PersonalRagCLI(cmd.Cmd):
         self.query_result_pretty_print(results)
         
     def do_rag_query(self, query):
-        pass
-    
+        chunks = self.retriever.retrieve(query)
+        # prompt = self.retriever.get_prompt(chunks) TODO: figure out the design of this
+        
     def postcmd(self, stop, line):
         print()  
         return stop
     
+    def do_bye(self, args):
+        """Exits the CLI."""
+        print("\nGoodbye!")
+        return True
     
 if __name__ == '__main__':
     PersonalRagCLI().cmdloop()
