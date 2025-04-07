@@ -22,7 +22,6 @@ def _complete_path(path):
 class STYLES:
     pass
 
-
 class PersonalRagCLI(cmd.Cmd):
     prompt = 'PersonalRAG>> '
     intro = 'Welcome to PersonalRAG.\nType "help" for available commands.\nType "bye" to exit.'
