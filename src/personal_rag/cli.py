@@ -1,10 +1,9 @@
 import cmd
 import os
 import glob as gb
-import json
 from personal_rag.rag import Retriever
 from pathlib import Path
-from personal_rag.preprocess import get_pdf_chunks, preprocess_pdfs_in_directory
+from personal_rag.preprocess import preprocess_pdfs_in_directory
 from personal_rag.preprocess import create_faiss_index
 
 import readline
@@ -25,43 +24,66 @@ class STYLES:
 class PersonalRagCLI(cmd.Cmd):
     prompt = 'PersonalRAG>> '
     intro = 'Welcome to PersonalRAG.\nType "help" for available commands.\nType "bye" to exit.'
-    
+
     def __init__(self):
+        print("Starting up ...")
         super().__init__()
         self.current_directory = os.getcwd()
         # TODO: make the retriever be actually loaded if the relevant files exist
         self.retriever = Retriever(db_path="./data/database_files/retriever.db", index_path="./data/database_files/faiss.index")
-        
+
         self.cache_dir = "./data"
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
-    
-    
-    def do_load_my_data(self, dirpath):
+
+    def do_index(self, args):
+        """
+        Indexes data in case there was more?
+        """
+
+        preprocess_dir = f"{self.cache_dir}/processed"
+        if not os.path.exists(preprocess_dir):
+            print("Cannot find /processed directory")
+
+        # ingest
+        self.retriever = create_faiss_index(preprocess_dir, clear_index=False)
+
+    def do_load(self, dirpath):
         """
         Loads and preprocessed your pdfs to be ready to use with the RAG system. Requires a path to the folder with your pdfs
         For example:
             load_my_data ./documents/my_pdfs
         """
-        
+
         path = Path(dirpath)
-                
+
         if not path.is_dir():
             print(f"The provided path '{dirpath}' is not an existing directory.")
-            return        
-                
+            return
+
         preprocess_dir = f"{self.cache_dir}/processed"
         if not os.path.exists(preprocess_dir):
             os.makedirs(preprocess_dir)
-        
+
+        print("Starting preprocessing ...")
+
         preprocess_pdfs_in_directory(dirpath, savepath=preprocess_dir)
-        
+
+        print("Done.")
+
+        print("Indexing data ...")
+
         # ingest
-        self.retriever = create_faiss_index(preprocess_dir)    
-    
-    def complete_load_my_data(self, text, line, start_idx, end_idx):
+        self.retriever = create_faiss_index(preprocess_dir)
+
+        print("Done.")
+
+    def complete_load(self, text, line, start_idx, end_idx):
         return _complete_path(text)
-    
+
+    def complete_query(self, text, line, start_idx, end_idx):
+        return _complete_path(text)
+
     def __query_result_pretty_print(self, results):
         docs = {}
         for res in results:
@@ -71,21 +93,21 @@ class PersonalRagCLI(cmd.Cmd):
                 docs[title].append(page)
             else:
                 docs[title] = [page]
-        
+
         for filename, pages in docs.items():
             print(filename)
             print(f"\tRelevant pages : {sorted(pages)}")
-    
+
     def do_query(self, query):
         """
-        Allows you to ask a query to Retriever. It will retrieve document chunks with relevant text and give you the relevant pages in the pdf. 
+        Allows you to ask a query to Retriever. It will retrieve document chunks with relevant text and give you the relevant pages in the pdf.
         For example:
             query "How do I add 2+2?"
         """
         results = self.retriever.retrieve(query)
         print("\nWe found the following document chunks most relevant to your query:\n")
         self.__query_result_pretty_print(results)
-        
+
     def do_rag_query(self, query):
         """
         Allows you to ask a query to the RAG system. It will give you an answer to your question based on the retrieved document chunks.
@@ -94,15 +116,15 @@ class PersonalRagCLI(cmd.Cmd):
         """
         chunks = self.retriever.retrieve(query)
         # prompt = self.retriever.get_prompt(chunks) TODO: figure out the design of this
-        
+
     def postcmd(self, stop, line):
-        print()  
+        print()
         return stop
-    
+
     def do_bye(self, args):
         """Exits the CLI."""
         print("\nGoodbye!")
         return True
-    
+
 if __name__ == '__main__':
     PersonalRagCLI().cmdloop()

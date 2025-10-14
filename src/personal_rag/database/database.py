@@ -27,13 +27,6 @@ class Database:
         doc_id = cursor.lastrowid
         return doc_id
 
-    
-    def add_document(self, header, chunk, embedding):
-        with sqlite3.connect(self.db_path) as conn:
-            doc_id = self._add_document(conn, header, chunk, embedding)
-            conn.commit()
-        return doc_id
-
     def add_documents_bulk(self, documents):
         doc_ids = []
         with sqlite3.connect(self.db_path) as conn:
@@ -60,8 +53,7 @@ class Database:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM documents WHERE id=?", (doc_id,))
             conn.commit()
-            
-            
+
+
 if __name__ == "__main__":
     db = Database()
-    
