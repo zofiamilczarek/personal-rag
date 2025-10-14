@@ -15,3 +15,7 @@ __pycache__
 
 # toml setup files
 *.egg-info
+
+# env files
+venv
+build

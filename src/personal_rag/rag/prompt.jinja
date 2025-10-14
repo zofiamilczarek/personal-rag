@@ -1,0 +1,7 @@
+Here are relevant chunks tha you can use to answer the user's question:
+{% for chunk in chunks %}
+## {{ chunk.header }} ##
+{{ chunk.chunk }}
+{% endfor %}
+
+question: {{ question }}

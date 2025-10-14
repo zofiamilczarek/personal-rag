@@ -62,7 +62,7 @@ class PersonalRagCLI(cmd.Cmd):
     def complete_load_my_data(self, text, line, start_idx, end_idx):
         return _complete_path(text)
     
-    def query_result_pretty_print(self, results):
+    def __query_result_pretty_print(self, results):
         docs = {}
         for res in results:
             title = res['header']['title']
@@ -84,9 +84,14 @@ class PersonalRagCLI(cmd.Cmd):
         """
         results = self.retriever.retrieve(query)
         print("\nWe found the following document chunks most relevant to your query:\n")
-        self.query_result_pretty_print(results)
+        self.__query_result_pretty_print(results)
         
     def do_rag_query(self, query):
+        """
+        Allows you to ask a query to the RAG system. It will give you an answer to your question based on the retrieved document chunks.
+        For example:
+            rag_query "How do I add 2+2?"
+        """
         chunks = self.retriever.retrieve(query)
         # prompt = self.retriever.get_prompt(chunks) TODO: figure out the design of this
         
