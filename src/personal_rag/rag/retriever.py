@@ -6,16 +6,21 @@ from personal_rag.database import Database
 # from personal_rag.preprocess import get_pdf_chunks
 import json
 import ast
+from pathlib import Path
+
 
 class Retriever:
     def __init__(self,
                  db_path="./data/database_files/retriever.db",
                  index_path="./data/database_files/faiss.index",
-                 model_name="Qwen/Qwen3-Embedding-0.6B",):
-
-        self.db = Database(db_path)
+                 model_name="BAAI/bge-m3"):
+        self.model_name = model_name
+        # self.db = Database(db_path)
         self.index_path = index_path
+        print("Loading Model")
         self.model = SentenceTransformer(model_name)
+        self.db = Database(db_path)
+        print("Done.")
         self.index = faiss.IndexFlatL2(self.model.get_sentence_embedding_dimension())
         self.doc_ids = []
         self.file_metadata_path = os.path.join(os.path.dirname(index_path), "file_metadata.json")
@@ -34,7 +39,11 @@ class Retriever:
 
     def _save_file_metadata(self):
         with open(self.file_metadata_path, "w") as f:
-            json.dump({"files": list(self.file_metadata["files"])}, f, indent=4)
+            json.dump({
+                "files": list(self.file_metadata["files"]),
+                "model": self.model_name,
+                "dimension": self.model.get_sentence_embedding_dimension()
+                       }, f, indent=4)
 
     def load_index(self):
         try:
@@ -44,6 +53,9 @@ class Retriever:
             self.doc_ids = []
 
     def save_index(self):
+        if not os.path.exists(os.path.dirname(self.index_path)):
+            os.makedirs(os.path.dirname(self.index_path))
+
         faiss.write_index(self.index, self.index_path)
         self._save_file_metadata()
 
@@ -63,6 +75,29 @@ class Retriever:
         self.file_metadata["files"].add(file_name)
 
         self.save_index()
+
+    def index_processed(self, data_path, clear_index = True):
+      path = Path(data_path)
+
+      if not path.is_dir():
+              raise NotADirectoryError(f"The provided path '{path}' is not a directory.")
+
+      if clear_index:
+          self.clear_index()
+
+      for file_path in path.iterdir():
+          suffix = str(Path(file_path).suffix)
+          file_name = str(Path(file_path).stem)
+          # ignore files that aren't pdfs and that are already in the index
+          if (suffix != '.json' or
+              file_name in self.file_metadata["files"]):
+              continue
+
+          with open(str(file_path), 'r') as f:
+              chunks = json.load(f)
+
+          self.add_document_chunks(chunks, file_name)
+
 
     def retrieve(self, query, k=5):
         query_embedding = self.model.encode(query).astype(np.float32).reshape(1, -1)

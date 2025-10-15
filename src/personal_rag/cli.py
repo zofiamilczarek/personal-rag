@@ -4,7 +4,16 @@ import glob as gb
 from personal_rag.rag import Retriever
 from pathlib import Path
 from personal_rag.preprocess import preprocess_pdfs_in_directory
-from personal_rag.preprocess import create_faiss_index
+import shutil
+
+def rm_r(path):
+    if os.path.isdir(path) and not os.path.islink(path):
+        shutil.rmtree(path)
+    elif os.path.exists(path):
+        os.remove(path)
+    else:
+        print("Not a path TODO make this an exception")
+
 
 import readline
 
@@ -17,9 +26,6 @@ def _complete_path(path):
         return gb.glob(os.path.join(path, '*'))
     else:
         return gb.glob(path+'*')
-
-class STYLES:
-    pass
 
 class PersonalRagCLI(cmd.Cmd):
     prompt = 'PersonalRAG>> '
@@ -45,8 +51,11 @@ class PersonalRagCLI(cmd.Cmd):
         if not os.path.exists(preprocess_dir):
             print("Cannot find /processed directory")
 
+        print("Indexing data ...")
+
         # ingest
-        self.retriever = create_faiss_index(preprocess_dir, clear_index=False)
+        self.retriever.index_processed(preprocess_dir, clear_index=False)
+        print("Done.")
 
     def do_load(self, dirpath):
         """
@@ -74,8 +83,7 @@ class PersonalRagCLI(cmd.Cmd):
         print("Indexing data ...")
 
         # ingest
-        self.retriever = create_faiss_index(preprocess_dir)
-
+        self.retriever.index_processed(preprocess_dir)
         print("Done.")
 
     def complete_load(self, text, line, start_idx, end_idx):
@@ -83,6 +91,13 @@ class PersonalRagCLI(cmd.Cmd):
 
     def complete_query(self, text, line, start_idx, end_idx):
         return _complete_path(text)
+
+    def do_clean(self, args):
+        print("Nuking folders ...")
+        rm_r("./data/database_files")
+        rm_r("./data/processed")
+        print("Done.")
+
 
     def __query_result_pretty_print(self, results):
         docs = {}
