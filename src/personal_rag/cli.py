@@ -5,6 +5,7 @@ from personal_rag.rag import Retriever
 from pathlib import Path
 from personal_rag.preprocess import preprocess_pdfs_in_directory
 import shutil
+import sys
 
 def rm_r(path):
     if os.path.isdir(path) and not os.path.islink(path):
@@ -20,6 +21,12 @@ import readline
 readline.set_completer_delims(' \t\n')
 
 
+if 'libedit' in readline.__doc__:
+    readline.parse_and_bind("bind ^I rl_complete")
+else:
+    readline.parse_and_bind("tab: complete")
+
+
 def _complete_path(path):
     """A method to handle path autocomplete in a cmd.Cmd interface"""
     if os.path.isdir(path):
@@ -27,13 +34,26 @@ def _complete_path(path):
     else:
         return gb.glob(path+'*')
 
+class _Wrapper:
+
+    def __init__(self, fd):
+        self.fd = fd
+
+    def readline(self, *args):
+        try:
+            return self.fd.readline(*args)
+        except KeyboardInterrupt:
+            print("C ya")
+            return '\n'
+
 class PersonalRagCLI(cmd.Cmd):
     prompt = 'PersonalRAG>> '
     intro = 'Welcome to PersonalRAG.\nType "help" for available commands.\nType "bye" to exit.'
 
     def __init__(self):
+
         print("Starting up ...")
-        super().__init__()
+        super().__init__(stdin=_Wrapper(sys.stdin))
         self.current_directory = os.getcwd()
         # TODO: make the retriever be actually loaded if the relevant files exist
         self.retriever = Retriever(db_path="./data/database_files/retriever.db", index_path="./data/database_files/faiss.index")
@@ -41,6 +61,8 @@ class PersonalRagCLI(cmd.Cmd):
         self.cache_dir = "./data"
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
+
+
 
     def do_index(self, args):
         """
@@ -97,6 +119,10 @@ class PersonalRagCLI(cmd.Cmd):
         rm_r("./data/database_files")
         rm_r("./data/processed")
         print("Done.")
+
+        print("Restarting DB ... \n\n")
+        self.retriever.db.__init__() # I hate this so much
+
 
 
     def __query_result_pretty_print(self, results):

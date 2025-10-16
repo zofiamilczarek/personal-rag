@@ -19,8 +19,9 @@ class Retriever:
         self.index_path = index_path
         print("Loading Model")
         self.model = SentenceTransformer(model_name)
-        self.db = Database(db_path)
         print("Done.")
+        self.db = Database(db_path)
+
         self.index = faiss.IndexFlatL2(self.model.get_sentence_embedding_dimension())
         self.doc_ids = []
         self.file_metadata_path = os.path.join(os.path.dirname(index_path), "file_metadata.json")

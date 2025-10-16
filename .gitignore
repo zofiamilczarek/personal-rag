@@ -19,3 +19,4 @@ __pycache__
 # env files
 venv
 build
+data
