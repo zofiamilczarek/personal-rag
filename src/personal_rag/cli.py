@@ -168,4 +168,7 @@ class PersonalRagCLI(cmd.Cmd):
         return True
 
 if __name__ == '__main__':
-    PersonalRagCLI().cmdloop()
+    try:
+      PersonalRagCLI().cmdloop()
+    except KeyboardInterrupt:
+      print("Goodbye")
