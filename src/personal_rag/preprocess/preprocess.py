@@ -17,12 +17,16 @@ def load_pdfs_from_directory(directory: str) -> Dict[str, Dict[int, str]]:
 
 def extract_pdf_text_page_numbers(pdf_path: str) -> Dict[int, str]:
     """Extracts text from a PDF and returns a dictionary mapping page numbers to text."""
-    with open(pdf_path, 'rb') as file:
-        reader = PyPDF2.PdfReader(file)
-        extracted_data = {}
-        for page_number, page in tqdm(enumerate(reader.pages), desc=f"Extracting file {pdf_path}"):
-            extracted_data[page_number + 1] = page.extract_text()
-    return extracted_data
+    try:
+      with open(pdf_path, 'rb') as file:
+          reader = PyPDF2.PdfReader(file)
+          extracted_data = {}
+          for page_number, page in tqdm(enumerate(reader.pages), desc=f"Extracting file {pdf_path}"):
+              extracted_data[page_number + 1] = page.extract_text()
+      return extracted_data
+    except:
+      print("Errored during pdf extraction")
+      return None
 
 def chunk_text(page: str, page_nb: int, title: str, max_chunk_size: int) -> List[Dict]:
     """Chunks a page into smaller parts, preserving metadata."""
@@ -32,6 +36,8 @@ def chunk_text(page: str, page_nb: int, title: str, max_chunk_size: int) -> List
 
 def get_pdf_chunks(pdf_path: str, max_chunk_size: int = 500):
     pages = extract_pdf_text_page_numbers(pdf_path)
+    if pages == None:
+        return []
     all_chunks = []
     for page_nb, page_content in pages.items():
         page_chunks = chunk_text(page_content, page_nb, pdf_path, max_chunk_size)
@@ -39,11 +45,11 @@ def get_pdf_chunks(pdf_path: str, max_chunk_size: int = 500):
     return all_chunks
 
 def preprocess_pdfs_in_directory(directory: str, savepath = ".data/processed", max_chunk_size: int = 500) -> None:
-    """Processes all PDFs in a directory and returns a list of chunks.""" 
-    
+    """Processes all PDFs in a directory and returns a list of chunks."""
+
     if not os.path.exists(savepath):
             os.makedirs(savepath)
-    
+
     for root, _, files in os.walk(directory):
         for file in files:
             if file.endswith(".pdf"):
@@ -55,10 +61,9 @@ def preprocess_pdfs_in_directory(directory: str, savepath = ".data/processed", m
 
 if __name__ == "__main__":
     pdf_path = "./data/raw_pdfs/nlp_textbook_jurafsky.pdf"
-    
+
     chunks = get_pdf_chunks(pdf_path)
     with open('./data/processed/chunks.json', 'w') as f:
         f.write(json.dumps(chunks))
-    
+
     print(*chunks[:10], sep="\n\n")
-    

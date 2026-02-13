@@ -20,26 +20,15 @@ class Database:
                               )''')
             conn.commit()
 
-    def _add_document(self, conn, header, chunk, embedding):
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO documents (header, chunk, embedding) VALUES (?, ?, ?)",
-                        (header, chunk, embedding.tobytes()))
-        doc_id = cursor.lastrowid
-        return doc_id
-
-    
-    def add_document(self, header, chunk, embedding):
-        with sqlite3.connect(self.db_path) as conn:
-            doc_id = self._add_document(conn, header, chunk, embedding)
-            conn.commit()
-        return doc_id
-
     def add_documents_bulk(self, documents):
         doc_ids = []
         with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
             for header, chunk, embedding in documents:
-                doc_id = self._add_document(conn, header, chunk, embedding)
+                cursor = conn.cursor()
+                cursor.execute("INSERT INTO documents (header, chunk, embedding) VALUES (?, ?, ?)",
+                                (header, chunk, embedding.tobytes()))
+                doc_ids.append(cursor.lastrowid)
+
             conn.commit()
         return doc_ids
 
@@ -60,8 +49,7 @@ class Database:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM documents WHERE id=?", (doc_id,))
             conn.commit()
-            
-            
+
+
 if __name__ == "__main__":
     db = Database()
-    
